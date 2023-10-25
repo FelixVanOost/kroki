@@ -1,53 +1,31 @@
 # syntax=docker/dockerfile:1.4
 
 ## dvisvgm (used by TikZ)
-FROM --platform=$BUILDPLATFORM ubuntu:jammy AS kroki-builder-dvisvgm
+FROM ubuntu:jammy AS kroki-builder-dvisvgm
 
 ARG BUILDARCH
 ARG TARGETARCH
 
-# Add the target architecture to the Apt package list
-RUN dpkg --add-architecture $TARGETARCH && \
-    sed -i "s/deb h/deb [arch=$BUILDARCH] h/g" /etc/apt/sources.list && \
-    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy main restricted" >> /etc/apt/sources.list && \
-    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" >> /etc/apt/sources.list && \
-    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" >> /etc/apt/sources.list
-
-# Install the build dependencies and cross-compiler
-RUN case $TARGETARCH in \
-    "amd64") APT_TARGET_ARCH=x86-64 ;; \
-    "arm64") APT_TARGET_ARCH=aarch64 ;; \
-    *) APT_TARGET_ARCH=$TARGETARCH ;; \
-    esac && \
-    apt-get update && apt-get install --no-install-recommends --yes \
+# Install the build dependencies
+RUN apt-get update && apt-get install --no-install-recommends --yes \
     ca-certificates \
     curl \
-    g++-$APT_TARGET_ARCH-linux-gnu \
-    ghostscript:$TARGETARCH \
-    libclipper-dev:$TARGETARCH \
-    libfreetype-dev:$TARGETARCH \
-    libkpathsea-dev:$TARGETARCH \
-    libssl-dev:$TARGETARCH \
+    g++ \
+    ghostscript \
+    libclipper-dev \
+    libfreetype-dev \
+    libkpathsea-dev \
+    libssl-dev \
     make \
-    dpkg-dev:$TARGETARCH \
-    zlib1g-dev:$TARGETARCH
+    pkg-config \
+    zlib1g-dev
 
 ARG DVISVGM_VERSION=3.0.4
 
 RUN curl -LO https://github.com/mgieseki/dvisvgm/releases/download/$DVISVGM_VERSION/dvisvgm-$DVISVGM_VERSION.tar.gz && \
     tar xf dvisvgm-$DVISVGM_VERSION.tar.gz && \
     cd dvisvgm-$DVISVGM_VERSION && \
-    case $BUILDARCH in \
-    "amd64") MAKE_BUILD_ARCH=x86_64 ;; \
-    "arm64") MAKE_BUILD_ARCH=aarch64 ;; \
-    *) MAKE_BUILD_ARCH=$BUILDARCH ;; \
-    esac && \
-    case $TARGETARCH in \
-    "amd64") MAKE_TARGET_ARCH=x86_64 ;; \
-    "arm64") MAKE_TARGET_ARCH=aarch64 ;; \
-    *) MAKE_TARGET_ARCH=$TARGETARCH ;; \
-    esac && \
-    ./configure --enable-bundled-libs --build $MAKE_BUILD_ARCH-linux-gnu --host $MAKE_TARGET_ARCH-linux-gnu && \
+    ./configure --enable-bundled-libs && \
     make && \
     make install
 
