@@ -3,34 +3,52 @@
 ## dvisvgm (used by TikZ)
 FROM --platform=$BUILDPLATFORM ubuntu:jammy AS kroki-builder-dvisvgm
 
+# Install the required utilities
+RUN apt-get update && apt-get install --no-install-recommends --yes \
+    ca-certificates \
+    curl \
+    make
+
 ARG BUILDARCH
 ARG TARGETARCH
 
-# Add the target architecture to the Apt package list
-RUN dpkg --add-architecture $TARGETARCH && \
+# Install the build dependencies
+RUN if [ "$BUILDARCH" = "$TARGETARCH" ]; then \
+    apt-get update && apt-get install --no-install-recommends --yes \
+    dpkg-dev \
+    g++ \
+    ghostscript \
+    libclipper-dev \
+    libfreetype-dev \
+    libkpathsea-dev \
+    libssl-dev \
+    pkg-config \
+    zlib1g-dev; \
+    else \
+    # Add the target architecture to the Apt package list
+    dpkg --add-architecture $TARGETARCH && \
     sed -i "s/deb h/deb [arch=$BUILDARCH] h/g" /etc/apt/sources.list && \
     echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy main restricted" >> /etc/apt/sources.list && \
     echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" >> /etc/apt/sources.list && \
-    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" >> /etc/apt/sources.list
-
-# Install the build dependencies and cross-compiler
-RUN case $TARGETARCH in \
-    "amd64") APT_TARGET_ARCH=x86-64 ;; \
-    "arm64") APT_TARGET_ARCH=aarch64 ;; \
-    *) APT_TARGET_ARCH=$TARGETARCH ;; \
+    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" >> /etc/apt/sources.list && \
+    # Translate the architecture identifier
+    case $TARGETARCH in \
+    "amd64" ) APT_TARGET_ARCH=x86-64 ;; \
+    "arm64" ) APT_TARGET_ARCH=aarch64 ;; \
+    * ) APT_TARGET_ARCH=$TARGETARCH ;; \
     esac && \
+    # Install the cross-compiler and target platform build dependencies
     apt-get update && apt-get install --no-install-recommends --yes \
-    ca-certificates \
-    curl \
+    dpkg-dev \
     g++-$APT_TARGET_ARCH-linux-gnu \
     ghostscript:$TARGETARCH \
     libclipper-dev:$TARGETARCH \
     libfreetype-dev:$TARGETARCH \
     libkpathsea-dev:$TARGETARCH \
     libssl-dev:$TARGETARCH \
-    make \
-    dpkg-dev:$TARGETARCH \
-    zlib1g-dev:$TARGETARCH
+    pkg-config:$TARGETARCH \
+    zlib1g-dev:$TARGETARCH; \
+    fi
 
 ARG DVISVGM_VERSION=3.0.4
 
