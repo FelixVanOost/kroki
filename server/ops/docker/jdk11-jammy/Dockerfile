@@ -1,24 +1,41 @@
 # syntax=docker/dockerfile:1.4
 
-## TikZ
+## dvisvgm (used by TikZ)
 FROM --platform=$BUILDPLATFORM ubuntu:jammy AS kroki-builder-dvisvgm
-
-RUN apt-get update && apt-get install --no-install-recommends --yes \
-    build-essential \
-    pkg-config \
-    libclipper-dev \
-    libfreetype-dev \
-    libkpathsea-dev \
-    ghostscript \
-    libssl-dev \
-    zlib1g-dev \
-    curl \
-    ca-certificates
-
-ARG DVISVGM_VERSION=3.0.4
 
 ARG BUILDARCH
 ARG TARGETARCH
+
+# Add the target architecture to the Apt package list
+RUN dpkg --add-architecture $TARGETARCH && \
+    sed -i "s/deb h/deb [arch=$BUILDARCH] h/g" /etc/apt/sources.list && \
+    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy main restricted" >> /etc/apt/sources.list && \
+    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" >> /etc/apt/sources.list
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" >> /etc/apt/sources.list && \
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates universe" >> /etc/apt/sources.list && \
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy multiverse" >> /etc/apt/sources.list && \
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates multiverse" >> /etc/apt/sources.list && \
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted" >> /etc/apt/sources.list && \
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-security universe" >> /etc/apt/sources.list && \
+#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-security multiverse" >> /etc/apt/sources.list
+
+RUN apt-get update && apt-get install --no-install-recommends --yes \
+    build-essential \
+    ca-certificates \
+    curl \
+    g++-aarch64-linux-gnu \
+    g++-x86-64-linux-gnu \
+    ghostscript \
+    libclipper-dev \
+    libfreetype-dev:$TARGETARCH \
+    libkpathsea-dev:$TARGETARCH \
+    libssl-dev \
+    pkg-config \
+    zlib1g-dev
+
+ARG DVISVGM_VERSION=3.0.4
+
 RUN curl -LO https://github.com/mgieseki/dvisvgm/releases/download/$DVISVGM_VERSION/dvisvgm-$DVISVGM_VERSION.tar.gz && \
     tar xf dvisvgm-$DVISVGM_VERSION.tar.gz && \
     cd dvisvgm-$DVISVGM_VERSION && \
