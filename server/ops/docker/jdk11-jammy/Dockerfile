@@ -10,29 +10,27 @@ ARG TARGETARCH
 RUN dpkg --add-architecture $TARGETARCH && \
     sed -i "s/deb h/deb [arch=$BUILDARCH] h/g" /etc/apt/sources.list && \
     echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy main restricted" >> /etc/apt/sources.list && \
-    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" >> /etc/apt/sources.list
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" >> /etc/apt/sources.list && \
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates universe" >> /etc/apt/sources.list && \
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy multiverse" >> /etc/apt/sources.list && \
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates multiverse" >> /etc/apt/sources.list && \
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse" >> /etc/apt/sources.list && \
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-security main restricted" >> /etc/apt/sources.list && \
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-security universe" >> /etc/apt/sources.list && \
-#    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-security multiverse" >> /etc/apt/sources.list
+    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted" >> /etc/apt/sources.list && \
+    echo "deb [arch=$TARGETARCH] http://ports.ubuntu.com/ubuntu-ports jammy universe" >> /etc/apt/sources.list
 
-RUN apt-get update && apt-get install --no-install-recommends --yes \
-    build-essential \
+# Install the build dependencies and cross-compiler
+RUN case $TARGETARCH in \
+    "amd64") APT_TARGET_ARCH=x86-64 ;; \
+    "arm64") APT_TARGET_ARCH=aarch64 ;; \
+    *) APT_TARGET_ARCH=$TARGETARCH ;; \
+    esac && \
+    apt-get update && apt-get install --no-install-recommends --yes \
     ca-certificates \
     curl \
-    g++-aarch64-linux-gnu \
-    g++-x86-64-linux-gnu \
-    ghostscript \
-    libclipper-dev \
+    g++-$APT_TARGET_ARCH-linux-gnu \
+    ghostscript:$TARGETARCH \
+    libclipper-dev:$TARGETARCH \
     libfreetype-dev:$TARGETARCH \
     libkpathsea-dev:$TARGETARCH \
-    libssl-dev \
-    pkg-config \
-    zlib1g-dev
+    libssl-dev:$TARGETARCH \
+    make \
+    dpkg-dev:$TARGETARCH \
+    zlib1g-dev:$TARGETARCH
 
 ARG DVISVGM_VERSION=3.0.4
 
@@ -40,14 +38,14 @@ RUN curl -LO https://github.com/mgieseki/dvisvgm/releases/download/$DVISVGM_VERS
     tar xf dvisvgm-$DVISVGM_VERSION.tar.gz && \
     cd dvisvgm-$DVISVGM_VERSION && \
     case $BUILDARCH in \
-        "amd64") MAKE_BUILD_ARCH=x86_64 ;; \
-        "arm64") MAKE_BUILD_ARCH=aarch64 ;; \
-        *) MAKE_BUILD_ARCH=$TARGETARCH ;; \
+    "amd64") MAKE_BUILD_ARCH=x86_64 ;; \
+    "arm64") MAKE_BUILD_ARCH=aarch64 ;; \
+    *) MAKE_BUILD_ARCH=$BUILDARCH ;; \
     esac && \
     case $TARGETARCH in \
-        "amd64") MAKE_TARGET_ARCH=x86_64 ;; \
-        "arm64") MAKE_TARGET_ARCH=aarch64 ;; \
-        *) MAKE_TARGET_ARCH=$TARGETARCH ;; \
+    "amd64") MAKE_TARGET_ARCH=x86_64 ;; \
+    "arm64") MAKE_TARGET_ARCH=aarch64 ;; \
+    *) MAKE_TARGET_ARCH=$TARGETARCH ;; \
     esac && \
     ./configure --enable-bundled-libs --build $MAKE_BUILD_ARCH-linux-gnu --host $MAKE_TARGET_ARCH-linux-gnu && \
     make && \
@@ -235,9 +233,9 @@ ARG TARGETARCH
 ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 RUN SVGBOB_VERSION=`cat Cargo.toml | grep "svgbob_cli =" | sed -r 's/.*"([^"]+)"/\1/'` && \
     case $TARGETARCH in \
-        "amd64") RUST_TARGET_ARCH=x86_64 ;; \
-        "arm64") RUST_TARGET_ARCH=aarch64 ;; \
-        *) RUST_TARGET_ARCH=$TARGETARCH ;; \
+    "amd64") RUST_TARGET_ARCH=x86_64 ;; \
+    "arm64") RUST_TARGET_ARCH=aarch64 ;; \
+    *) RUST_TARGET_ARCH=$TARGETARCH ;; \
     esac && \
     rustup target add $RUST_TARGET_ARCH-unknown-linux-gnu && \
     cargo install --quiet --target $RUST_TARGET_ARCH-unknown-linux-gnu --version $SVGBOB_VERSION svgbob_cli
