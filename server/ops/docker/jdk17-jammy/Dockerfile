@@ -196,8 +196,8 @@ RUN SVGBOB_VERSION=`cat Cargo.toml | grep "svgbob_cli =" | sed -r 's/.*"([^"]+)"
     rustup target add $RUST_TARGET_ARCH-unknown-linux-gnu && \
     cargo install --quiet --target $RUST_TARGET_ARCH-unknown-linux-gnu --version $SVGBOB_VERSION svgbob_cli
 
-ARG SYMBOLATOR_VERSION=1.2.2
-FROM madmanfred/symbolator:v$SYMBOLATOR_VERSION as symbolator
+# Docker images published to the Docker Hub
+FROM madmanfred/symbolator:v1.2.2 as symbolator
 
 ## yuzutech/kroki
 FROM eclipse-temurin:17.0.10_7-jre-jammy
